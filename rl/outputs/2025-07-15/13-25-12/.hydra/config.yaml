@@ -1,0 +1,118 @@
+experiment:
+  sampling_device: cpu
+  train_device: cpu
+  buffer_device: cpu
+  share_policy_params: false
+  prefer_continuous_actions: true
+  collect_with_grad: false
+  parallel_collection: true
+  gamma: 0.99
+  lr: 5.0e-05
+  adam_eps: 1.0e-06
+  clip_grad_norm: true
+  clip_grad_val: 5.0
+  soft_target_update: true
+  polyak_tau: 0.005
+  hard_target_update_frequency: 5
+  exploration_eps_init: 0.8
+  exploration_eps_end: 0.01
+  exploration_anneal_frames: null
+  max_n_iters: null
+  max_n_frames: 30000000
+  on_policy_collected_frames_per_batch: 6000
+  on_policy_n_envs_per_worker: 15
+  on_policy_n_minibatch_iters: 45
+  on_policy_minibatch_size: 400
+  off_policy_collected_frames_per_batch: 6000
+  off_policy_n_envs_per_worker: 10
+  off_policy_n_optimizer_steps: 1000
+  off_policy_train_batch_size: 128
+  off_policy_memory_size: 1000000
+  off_policy_init_random_frames: 0
+  off_policy_use_prioritized_replay_buffer: false
+  off_policy_prb_alpha: 0.6
+  off_policy_prb_beta: 0.4
+  evaluation: true
+  render: true
+  evaluation_interval: 18000
+  evaluation_episodes: 10
+  evaluation_deterministic_actions: false
+  evaluation_static: false
+  loggers:
+  - tensorboard
+  - csv
+  project_name: benchmarl
+  create_json: true
+  save_folder: /sfs/weka/scratch/qhv6ku/movingout_1223/moving_out_AI/benchmarl_results/1000
+  restore_file: null
+  restore_map_location: null
+  checkpoint_interval: 18000
+  checkpoint_at_end: false
+  keep_checkpoints_num: 3
+algorithm:
+  share_param_critic: true
+  clip_epsilon: 0.2
+  entropy_coef: 0.0
+  critic_coef: 1.0
+  loss_critic_type: l2
+  lmbda: 0.9
+  scale_mapping: biased_softplus_1.0
+  use_tanh_normal: true
+  minibatch_advantage: false
+task:
+  task: moving_out
+  max_cycles: 1000
+  map_name: HandOff
+  reward_setting: dense
+  dense_rewards_setting:
+    step_cost: -0.01
+    small_items:
+      move_items_to_target_areas: 20.0
+      move_items_to_target_areas_rewards_to_the_other: 1.0
+      move_item_out_of_target_areas: -20.0
+      move_item_out_of_target_areas_rewards_to_the_other: 0.0
+      scale_for_agents_get_closer_to_cloest_small_items: 20.0
+      unhold_small_items_which_not_inside_target_area: -5
+      hold_small_items_which_not_inside_target_area: 5
+      hold_small_items_in_target_areas: -10.0
+      unhold_small_items_in_target_areas: 10.0
+    middle_and_large:
+      move_items_to_target_areas: 20.0
+      move_item_out_of_target_areas: -20.0
+      scale_for_agents_get_closer_to_target_middle_large_or_target_area: 20.0
+      hold_large_items_in_target_areas: -10.0
+      unhold_large_items_in_target_areas: 10.0
+      unhold_items_which_not_inside_target_area: -5
+      hold_items_which_not_inside_target_area: 5
+      hold_items_but_different_with_the_other: -10.0
+      if_two_agents_hold_same_item_not_in_target_area: 10.0
+      if_two_agents_unhold_same_item_not_in_target_area: -10.0
+      if_two_agents_hold_item_in_diagonal: 1.0
+      if_two_agents_unhold_item_in_diagonal_and_not_in_target_area: -1.0
+    middle_items:
+      TBD: 0
+    large_items:
+      TBD: 0
+  repeat_actions: 1
+  add_noise_to_item: false
+model:
+  name: mlp
+  num_cells:
+  - 256
+  - 256
+  layer_class: torch.nn.Linear
+  activation_class: torch.nn.Tanh
+  activation_kwargs: null
+  norm_class: null
+  norm_kwargs: null
+critic_model:
+  name: mlp
+  num_cells:
+  - 256
+  - 256
+  layer_class: torch.nn.Linear
+  activation_class: torch.nn.Tanh
+  activation_kwargs: null
+  norm_class: null
+  norm_kwargs: null
+seed: 0

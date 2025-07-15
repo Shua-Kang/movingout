@@ -1,0 +1,6 @@
+[submodule "rl/BenchMARL"]
+	path = rl/BenchMARL
+	url = git@github.com:Shua-Kang/BenchMARL.git
+[submodule "rl/PettingZoo"]
+	path = rl/PettingZoo
+	url = git@github.com:Shua-Kang/PettingZoo.git
