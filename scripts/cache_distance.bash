@@ -1,0 +1,9 @@
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/1_HandOff.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/2_PassOrSplit.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/3_EfficientRoutes.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/4_PriorityPick.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/5_CornerDecision.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/7_TopBottomPriority.png
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/8_AdaptiveAssist.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/10_SingleRotation.json
+python -m moving_out.planner.low_level_planner.cache_distance_for_specific_map --map_path  moving_out_env/moving_out/maps/maps_v1/12_SequentialRotations.json
