@@ -4,3 +4,6 @@
 [submodule "rl/PettingZoo"]
 	path = rl/PettingZoo
 	url = git@github.com:Shua-Kang/PettingZoo.git
+[submodule "moving_out_env"]
+	path = moving_out_env
+	url = git@github.com:live-robotics-uva/moving_out_env.git
