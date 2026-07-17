@@ -1,13 +1,10 @@
 import logging
 import math
-import time
-from datetime import datetime
 from typing import Union
 
 import einops
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from einops.layers.torch import Rearrange
 
 logger = logging.getLogger(__name__)
@@ -302,83 +299,4 @@ class ConditionalUnet1D(nn.Module):
         return x
 
 
-class evaluator_dp:
-    def __init__(
-        self, model_path, previous_steps, selected_actions=2, max_items_number=7
-    ) -> None:
-        self.loaded_data = torch.load(model_path, weights_only=False)
-        self.model = self.loaded_data["model"]
-        self.model = self.model.eval()
-        self.training_options = self.loaded_data["training_options"]
-        from diffusers.schedulers.scheduling_ddim import DDIMScheduler
-
-        #### please change the code so you get this attributes from torch.load()
-        num_inference_steps = 32
-        self.noise_scheduler = DDIMScheduler(
-            num_train_timesteps=num_inference_steps,
-            beta_schedule="squaredcos_cap_v2",
-            prediction_type="epsilon",
-        )
-        self.noise_scheduler.set_timesteps(num_inference_steps)
-        self.pred_horizon = 8
-        self.action_dim = 5
-        self.max_items_number = max_items_number
-        self.selected_actions = selected_actions
-        self.previous_steps = previous_steps
-
-    def get_input(self, states, past_states):
-        states = torch.tensor(states, dtype=torch.float32).to(states.device).unsqueeze(0)
-        past_states = (
-            torch.tensor(past_states, dtype=torch.float32).to(states.device).unsqueeze(0)
-        )
-
-        return states, past_states
-
-    def get_action(self, states, past_states):
-        print("time1", time.time())
-        states, past_states = self.get_input(states, past_states)
-        states = states.unsqueeze(0)
-        if self.previous_steps >= 1:
-            states = torch.cat([past_states, states], dim=2)
-        else:
-            states = states
-        # states = torch.cat((past_states, states), dim = 2)
-        action = torch.empty(
-            (1, self.pred_horizon, self.action_dim), device=states.device
-        ).normal_(-1, 1)
-        for k in self.noise_scheduler.timesteps:
-            noise_pred = self.model(action, k, states)
-            action = self.noise_scheduler.step(
-                model_output=noise_pred, timestep=k, sample=action
-            )[0]
-
-        move_actions = []
-        hold_actions = []
-        action_type = "fb_cos_sin"
-        selected_action = self.selected_actions
-        for i in range(selected_action):
-            hold_logit = action[0, i : i + 1, 3:]
-
-            def de_normalize_action(normalized_action):
-                x_component = normalized_action[:, :, 0]
-                y_component = normalized_action[:, :, 1]
-                speed = torch.sqrt(x_component**2 + y_component**2)
-                angle = torch.atan2(y_component, x_component)
-                de_normalized_action = torch.cat(
-                    [speed.unsqueeze(2), angle.unsqueeze(2)], dim=2
-                )
-                return de_normalized_action
-
-            ac_dis = action[:, i : i + 1, 1:3]
-
-            ac_dis = de_normalize_action(ac_dis).squeeze()
-            ac_dis[0] = action[:, i : i + 1, 0]
-            probabilities = F.softmax(hold_logit * 5, dim=-1)
-            holding_action = torch.multinomial(probabilities, num_samples=1)
-            holding_action = holding_action.squeeze(1)
-
-            move_actions.append(ac_dis)
-            hold_actions.append(holding_action)
-        print("time2", time.time())
-        return move_actions, hold_actions
 

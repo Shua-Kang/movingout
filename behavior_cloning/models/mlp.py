@@ -13,11 +13,9 @@ class TrajectoryMLP(nn.Module):
         hidden_dim,
         k,
         action_type="fb_cos_sin",
-        Probabilistic=False,
         dropout=False,
     ):
         super(TrajectoryMLP, self).__init__()
-        self.Probabilistic = Probabilistic
 
         self.fc1 = nn.Linear(input_dim, hidden_dim)
         self.relu = nn.Tanh()
@@ -28,18 +26,15 @@ class TrajectoryMLP(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, int(hidden_dim / 2))
         self.fc3 = nn.Linear(int(hidden_dim / 2), int(hidden_dim / 4))
 
-        if self.Probabilistic:
-            output_size = 4 * k
-        else:
-            if action_type == "fb_cos_sin":
-                self.output_mse_size = 3
-            elif action_type == "cos_sin":
-                self.output_mse_size = 2
-            elif action_type == "ce_cos_sin":
-                self.output_mse_size = 5
-            elif action_type == "ce_cos_sin_speed_direction":
-                self.output_mse_size = 5
-            output_size = self.output_mse_size * k
+        if action_type == "fb_cos_sin":
+            self.output_mse_size = 3
+        elif action_type == "cos_sin":
+            self.output_mse_size = 2
+        elif action_type == "ce_cos_sin":
+            self.output_mse_size = 5
+        elif action_type == "ce_cos_sin_speed_direction":
+            self.output_mse_size = 5
+        output_size = self.output_mse_size * k
         self.fc3_mse = nn.Linear(
             int(hidden_dim / 4), output_size
         )  # MSE output layer for k steps, 2 outputs each
@@ -71,16 +66,7 @@ class TrajectoryMLP(nn.Module):
         ce_logits = self.fc3_ce(x).reshape(
             x.size(0), -1, 2
         )  # Output shape [batch_size, k, 2]
-        if self.Probabilistic:
-            mean, log_std = mse_output.chunk(2, dim=1)
-            std = torch.exp(log_std)
-            # print(mse_output.shape)
-            # print(mean.shape)
-            # print(log_variance.shape)
-            # exit(0)
-            return mean, std, ce_logits
-        else:
-            return mse_output, ce_logits, inner_state
+        return mse_output, ce_logits, inner_state
 
 
 class TrajectoryMLPEncodeAnother(nn.Module):

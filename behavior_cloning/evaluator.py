@@ -50,8 +50,7 @@ class MovingOutEvaluator:
         self.axis = [[0, 0, 0, 0], [0, 0, 0, 0]]
 
         self.env = MovingOutEnv(use_state=False, map_name=map_name)
-        if self.env.if_cache_founded:
-            self.cahce_file = copy.deepcopy(self.env.distance_cache)
+        self.cahce_file = copy.deepcopy(getattr(self.env, "distance_cache", None))
         self.buffer_robot_1 = None
         self.buffer_robot_2 = None
         self.reset_buffer()
@@ -140,14 +139,14 @@ class MovingOutEvaluator:
             "add_noise_to_item": self.add_noise_to_item,
         }
 
-        self.model_1_previous_steps = evaluation_results["training_options_1"][
-            "previous_steps"
-        ]
-        self.model_2_previous_steps = evaluation_results["training_options_2"][
-            "previous_steps"
-        ]
+        self.model_1_previous_steps = (
+            evaluation_results["training_options_1"] or {}
+        ).get("previous_steps", 5)
+        self.model_2_previous_steps = (
+            evaluation_results["training_options_2"] or {}
+        ).get("previous_steps", 5)
 
-        if save_videos:
+        if True:  # a fresh result dir is needed for trajectories even without videos
             while True:
                 time.sleep(random.random())
                 current_time = time.time()
@@ -220,7 +219,7 @@ class MovingOutEvaluator:
                         if self.replan_times != 1:
                             # img = self.env.render("rgb_array")
                             # cv2.imwrite(f"img_1.png", img)
-                            if self.env.if_cache_founded:
+                            if self.cahce_file is not None:
                                 self.cloned_env = self.env.clone(self.cahce_file)
                             else:
                                 self.cloned_env = self.env.clone()
@@ -235,7 +234,10 @@ class MovingOutEvaluator:
                         data_for_save_trajectory = []
                         for a in actions:
                             steps_cloned_env += 1
-                            obs, rew, done, info = self.cloned_env.step(a)
+                            obs, rew, terminated, truncated, info = (
+                                self.cloned_env.step(a)
+                            )
+                            done = bool(terminated) or bool(truncated)
                             img_obs = self.cloned_env.render("rgb_array")
                             states = self.cloned_env.get_all_states()
                             states_in_cloned_env.append(states)

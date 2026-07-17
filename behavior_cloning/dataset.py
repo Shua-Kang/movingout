@@ -334,7 +334,16 @@ class TrajectoryDataset(Dataset):
     
 
 
-def load_data_from_huggingface(dataset_name, split="all", states_encoder=None):
+def load_data_from_huggingface(
+    dataset_name, split="train", states_encoder=None, map_name=None, robot_id=None
+):
+    """Load demonstration trajectories from a HuggingFace dataset.
+
+    - map_name: keep only trajectories recorded on this map (None = all maps).
+    - robot_id: 1 -> only robot_1's (ego-view, own-action) trajectories,
+                2 -> only robot_2's, None -> both. Each robot's model is
+                trained purely on its own data; the two are never mixed.
+    """
     if(states_encoder is None):
         states_encoder = StatesEncoder()
     def relabel_actions(actions, current_robot_states, next_robot_states):
@@ -345,16 +354,16 @@ def load_data_from_huggingface(dataset_name, split="all", states_encoder=None):
     from datasets import load_dataset
     import json
     ds = load_dataset(dataset_name, split=split)
-    
+
     all_trajectories = []
-    
+
     for data in ds:
+        if map_name is not None and data.get("map_name") != map_name:
+            continue
         data_dict = json.loads(data["steps_data"])
-        trajectory_robot_1 = []
-        trajectory_robot_2 = []
+        states_action_pairs_0 = []
+        states_action_pairs_1 = []
         for i, data_item in enumerate(data_dict):
-            states_action_pairs_0 = []
-            states_action_pairs_1 = []
             action = data_item[2]
             if i != len(data_dict) - 1:
                 action[0][2] = relabel_actions(
@@ -370,12 +379,14 @@ def load_data_from_huggingface(dataset_name, split="all", states_encoder=None):
             else:
                 action[0][2] = 1 if action[0][2] else 0
                 action[1][2] = 1 if action[1][2] else 0
-        
+
             encoded_states = states_encoder.get_state_by_current_obs_states(data_item[1])
             states_action_pairs_0.append((encoded_states[0], (action[0], action[1])))
             states_action_pairs_1.append((encoded_states[1], (action[1], action[0])))
-        all_trajectories.append(states_action_pairs_0)
-        all_trajectories.append(states_action_pairs_1)
+        if robot_id in (None, 1):
+            all_trajectories.append(states_action_pairs_0)
+        if robot_id in (None, 2):
+            all_trajectories.append(states_action_pairs_1)
     return all_trajectories
 
 

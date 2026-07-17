@@ -195,61 +195,83 @@ if __name__ == "__main__":
     # Configuration parameters
     import argparse
 
-    parser = argparse.ArgumentParser(description="Process JSON file and ID.")
+    parser = argparse.ArgumentParser(
+        description="Train a deterministic MLP behavior-cloning agent. One model "
+        "is trained per robot, each on its own robot's data only."
+    )
     parser.add_argument(
         "--dataset_name", type=str, default="ShuaKang/movingout_task1", help="dataset name in huggingface"
     )
-    parser.add_argument("--model_save_path", default="model.pt", type=str, help="model path")
+    parser.add_argument("--split", default="train", type=str, help="dataset split")
     parser.add_argument(
-        "--action_type", default="fb_cos_sin", type=str, help="model path"
+        "--map_name", default=None, type=str,
+        help="only train on trajectories from this map (e.g. HandOff); default: all maps",
     )
-    parser.add_argument("--obs_horizon", default=5, type=int, help="model path")
-    parser.add_argument("--action_horizon", default=3, type=int, help="model path")
-    parser.add_argument("--epoch", default=1000, type=int, help="model path")
+    parser.add_argument(
+        "--robot_id", default="both", type=str, choices=["1", "2", "both"],
+        help="which robot's model to train; each robot uses only its own data",
+    )
+    parser.add_argument("--model_save_path", default="mlp.pt", type=str, help="model path; _robot1/_robot2 is appended")
+    parser.add_argument(
+        "--action_type", default="fb_cos_sin", type=str, help="action encoding"
+    )
+    parser.add_argument("--obs_horizon", default=5, type=int)
+    parser.add_argument("--action_horizon", default=3, type=int)
+    parser.add_argument("--epoch", default=1000, type=int)
+    parser.add_argument("--batch_size", default=1024, type=int)
+    parser.add_argument("--lr", default=0.001, type=float)
+    parser.add_argument("--hidden_dim", default=2048, type=int)
     parser.add_argument("--predict_another", action="store_true")
     parser.add_argument("--drop_out", action="store_true")
-    parser.add_argument("--add_noise", action="store_true")
-    parser.add_argument("--shift_another_states", action="store_true")
-    parser.add_argument("--no_another_states", action="store_true")
-    parser.add_argument("--noise_std", default=0.1, type=float, help="model path")
-    parser.add_argument("--shift_range", default=1, type=int, help="model path")
-    parser.add_argument("--recombination_trajectories", action="store_true")
 
     try:
         args = parser.parse_args()
     except:
         args = parser.parse_args([])
-    
+
     obs_horizon = args.obs_horizon  # Previous steps
     action_horizon = args.action_horizon  # Next steps
-    
-    states_encoder = StatesEncoder()
-    loaded_data = load_data_from_huggingface(args.dataset_name, split="all", states_encoder=states_encoder)
-    dataset = TrajectoryDataset(loaded_data, obs_horizon, action_horizon, states_encoder=states_encoder)
-    batch_size = 1024
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    
-    one_state_dim = len(loaded_data[0][0][0])
-    
-    input_dim = (
-        obs_horizon * one_state_dim + one_state_dim
-    ) 
-    hidden_dim = 2048
 
-    # Initialize the model
-    model = TrajectoryMLP(
-        input_dim, hidden_dim, action_horizon, action_type=args.action_type, dropout=args.drop_out
-    )
-    all_training_options = vars(args)
-    # Train the model
-    train(
-        model,
-        dataloader,
-        epochs=args.epoch,
-        lr=0.001,
-        model_name=args.model_save_path,
-        device=device,
-        predict_another=args.predict_another,
-        action_type=args.action_type,
-        all_training_options=all_training_options,
-    )
+    robot_ids = [1, 2] if args.robot_id == "both" else [int(args.robot_id)]
+    states_encoder = StatesEncoder()
+    for robot_id in robot_ids:
+        loaded_data = load_data_from_huggingface(
+            args.dataset_name,
+            split=args.split,
+            states_encoder=states_encoder,
+            map_name=args.map_name,
+            robot_id=robot_id,
+        )
+        dataset = TrajectoryDataset(loaded_data, obs_horizon, action_horizon, states_encoder=states_encoder)
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+
+        one_state_dim = len(loaded_data[0][0][0])
+
+        input_dim = (
+            obs_horizon * one_state_dim + one_state_dim
+        )
+
+        # Initialize the model
+        model = TrajectoryMLP(
+            input_dim, args.hidden_dim, action_horizon, action_type=args.action_type, dropout=args.drop_out
+        )
+        all_training_options = vars(args).copy()
+        all_training_options["arch"] = "mlp"
+        all_training_options["robot_id"] = robot_id
+        all_training_options["previous_steps"] = obs_horizon
+        all_training_options["selected_actions"] = action_horizon
+
+        save_path = args.model_save_path.replace(".pt", f"_robot{robot_id}.pt")
+        print(f"=== training MLP for robot_{robot_id} ({len(dataset)} samples) -> {save_path}")
+        # Train the model
+        train(
+            model,
+            dataloader,
+            epochs=args.epoch,
+            lr=args.lr,
+            model_name=save_path,
+            device=device,
+            predict_another=args.predict_another,
+            action_type=args.action_type,
+            all_training_options=all_training_options,
+        )

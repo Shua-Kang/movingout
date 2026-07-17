@@ -11,7 +11,6 @@ class TrajectoryGRU(nn.Module):
         m, 
         k, 
         action_type="fb_cos_sin",
-        Probabilistic=False,
         dropout=False,
     ):
         """
@@ -22,7 +21,6 @@ class TrajectoryGRU(nn.Module):
         Other logic like hidden_dim, action_type etc. can be reused
         """
         super(TrajectoryGRU, self).__init__()
-        self.Probabilistic = Probabilistic
         self.action_type = action_type
         self.m = m
         self.k = k
@@ -45,20 +43,15 @@ class TrajectoryGRU(nn.Module):
         self.relu = nn.Tanh()  # You can change to ReLU according to needs
 
         # Determine output size based on action_type
-        if self.Probabilistic:
-            # If it's a probabilistic model, e.g., mean+std, size 4*k (2*k for mean, 2*k for std)
-            output_size = 4 * k
-        else:
-            # Otherwise decide according to original logic
-            if action_type == "fb_cos_sin":
-                self.output_mse_size = 3
-            elif action_type == "cos_sin":
-                self.output_mse_size = 2
-            elif action_type == "ce_cos_sin":
-                self.output_mse_size = 5
-            elif action_type == "ce_cos_sin_speed_direction":
-                self.output_mse_size = 5
-            output_size = self.output_mse_size * k
+        if action_type == "fb_cos_sin":
+            self.output_mse_size = 3
+        elif action_type == "cos_sin":
+            self.output_mse_size = 2
+        elif action_type == "ce_cos_sin":
+            self.output_mse_size = 5
+        elif action_type == "ce_cos_sin_speed_direction":
+            self.output_mse_size = 5
+        output_size = self.output_mse_size * k
 
         # Used to predict MSE part (regression part, e.g., cos,sin)
         self.fc3_mse = nn.Linear(hidden_dim // 4, output_size)
@@ -121,13 +114,7 @@ class TrajectoryGRU(nn.Module):
         # CE corresponding output: [batch_size, k, 2]
         ce_logits = x_for_ce.reshape(x.size(0), -1, 2)
 
-        if self.Probabilistic:
-            # If it's probabilistic output
-            mean, log_std = mse_output.chunk(2, dim=1)
-            std = torch.exp(log_std)
-            return mean, std, ce_logits
-        else:
-            return mse_output, ce_logits, inner_state
+        return mse_output, ce_logits, inner_state
 
 
 # Define the GRU model

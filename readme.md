@@ -85,31 +85,48 @@ python rl/gen_eval_gifs.py <checkpoint.pt> stoch 3 out/rollout
 
 ## Train Behavior Cloning Models
 
-### 1. Train MLP
+Demonstrations are pulled from HuggingFace (`ShuaKang/movingout_task1` /
+`..._task2`). Each script trains one model per robot — robot 1's model only
+sees robot 1's data and vice versa (`--robot_id both|1|2`); `--map_name`
+restricts training to one map (recommended, e.g. `HandOff`). Saved
+checkpoints get a `_robot1` / `_robot2` suffix.
+
+### 1. Train MLP (deterministic)
 
 ```bash
 cd behavior_cloning
-python train_mlp.py
+python train_mlp.py --map_name HandOff --model_save_path mlp_handoff.pt --epoch 300
 ```
 
-### 2. Train Diffusion Policy (DP)
+### 2. Train GRU (stochastic — random-noise initial hidden state)
 
-*Coming soon*
+```bash
+python train_gru.py --map_name HandOff --model_save_path gru_handoff.pt --epoch 300
+```
 
-### 3. Train BASS Method
+### 3. Train Diffusion Policy (stochastic)
 
-*Coming soon*
+```bash
+python train_diffusion.py --map_name HandOff --model_save_path dp_handoff.pt --epoch 300
+```
 
 ---
 
 ## Evaluation
 
+Any mix of architectures (`mlp` | `gru` | `dp`) can be paired:
+
 ```bash
 cd behavior_cloning
-python evaluate_models.py --robot_1_modal_path model2.pt --robot_2_modal_path model2.pt
+python evaluate_models.py --map_name HandOff \
+  --robot_1_model_path mlp_handoff_robot1.pt --robot_1_arch mlp \
+  --robot_2_model_path mlp_handoff_robot2.pt --robot_2_arch mlp \
+  --evaluation_times 3
 ```
 
-Results are saved in the `outputs/` folder.
+Scores, trajectories, and rollout videos are saved under
+`exp_results/<experiment_save_path>/<timestamp>/` (disable videos with
+`--no_videos`).
 
 ---
 
