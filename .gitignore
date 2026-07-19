@@ -209,3 +209,14 @@ __marimo__/
 temp*
 *.pt
 outputs/*
+*.out
+exp_results/
+behavior_cloning/data_cache/
+behavior_cloning/weights/
+
+# local experiment workspaces (not part of the release)
+benchmarl_results/
+bc_data/
+bc_from_rl/
+rl/outputs/
+rl/collect_bc_data.py

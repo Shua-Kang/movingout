@@ -335,7 +335,8 @@ class TrajectoryDataset(Dataset):
 
 
 def load_data_from_huggingface(
-    dataset_name, split="train", states_encoder=None, map_name=None, robot_id=None
+    dataset_name, split="train", states_encoder=None, map_name=None, robot_id=None,
+    cache_dir="data_cache",
 ):
     """Load demonstration trajectories from a HuggingFace dataset.
 
@@ -343,7 +344,17 @@ def load_data_from_huggingface(
     - robot_id: 1 -> only robot_1's (ego-view, own-action) trajectories,
                 2 -> only robot_2's, None -> both. Each robot's model is
                 trained purely on its own data; the two are never mixed.
+    - cache_dir: encoded trajectories are cached here as .npy so repeated /
+                 parallel trainings skip the HF load entirely (None = off).
     """
+    import os
+    cache_path = None
+    if cache_dir:
+        key = f"{dataset_name.replace('/', '_')}_{split}_{map_name}_{robot_id}.npy"
+        cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  cache_dir, key)
+        if os.path.exists(cache_path):
+            return list(np.load(cache_path, allow_pickle=True))
     if(states_encoder is None):
         states_encoder = StatesEncoder()
     def relabel_actions(actions, current_robot_states, next_robot_states):
@@ -387,6 +398,10 @@ def load_data_from_huggingface(
             all_trajectories.append(states_action_pairs_0)
         if robot_id in (None, 2):
             all_trajectories.append(states_action_pairs_1)
+    if cache_path is not None:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        np.save(cache_path, np.array(all_trajectories, dtype=object),
+                allow_pickle=True)
     return all_trajectories
 
 

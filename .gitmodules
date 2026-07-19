@@ -1,9 +1,12 @@
 [submodule "rl/BenchMARL"]
 	path = rl/BenchMARL
 	url = git@github.com:Shua-Kang/BenchMARL.git
+	ignore = untracked
 [submodule "rl/PettingZoo"]
 	path = rl/PettingZoo
 	url = git@github.com:Shua-Kang/PettingZoo.git
+	ignore = untracked
 [submodule "moving_out_env"]
 	path = moving_out_env
 	url = git@github.com:live-robotics-uva/moving_out_env.git
+	ignore = untracked

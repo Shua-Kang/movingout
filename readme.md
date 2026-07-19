@@ -86,28 +86,30 @@ python rl/gen_eval_gifs.py <checkpoint.pt> stoch 3 out/rollout
 ## Train Behavior Cloning Models
 
 Demonstrations are pulled from HuggingFace (`ShuaKang/movingout_task1` /
-`..._task2`). Each script trains one model per robot — robot 1's model only
-sees robot 1's data and vice versa (`--robot_id both|1|2`); `--map_name`
-restricts training to one map (recommended, e.g. `HandOff`). Saved
-checkpoints get a `_robot1` / `_robot2` suffix.
+`..._task2`) and cached locally under `behavior_cloning/data_cache/`. Each
+script trains one model per robot — robot 1's model only sees robot 1's data
+and vice versa (`--robot_id both|1|2`); `--map_name` restricts training to
+one map (recommended, e.g. `HandOff`). Checkpoints are written to
+`behavior_cloning/weights/` with a `_robot1` / `_robot2` suffix; evaluation
+outputs (scores, trajectories, videos) go to `behavior_cloning/exp_results/`.
 
 ### 1. Train MLP (deterministic)
 
 ```bash
 cd behavior_cloning
-python train_mlp.py --map_name HandOff --model_save_path mlp_handoff.pt --epoch 300
+python train_mlp.py --map_name HandOff --model_save_path weights/mlp_handoff.pt --epoch 300
 ```
 
 ### 2. Train GRU (stochastic — random-noise initial hidden state)
 
 ```bash
-python train_gru.py --map_name HandOff --model_save_path gru_handoff.pt --epoch 300
+python train_gru.py --map_name HandOff --model_save_path weights/gru_handoff.pt --epoch 300
 ```
 
 ### 3. Train Diffusion Policy (stochastic)
 
 ```bash
-python train_diffusion.py --map_name HandOff --model_save_path dp_handoff.pt --epoch 300
+python train_diffusion.py --map_name HandOff --model_save_path weights/dp_handoff.pt --epoch 300
 ```
 
 ---
@@ -119,8 +121,8 @@ Any mix of architectures (`mlp` | `gru` | `dp`) can be paired:
 ```bash
 cd behavior_cloning
 python evaluate_models.py --map_name HandOff \
-  --robot_1_model_path mlp_handoff_robot1.pt --robot_1_arch mlp \
-  --robot_2_model_path mlp_handoff_robot2.pt --robot_2_arch mlp \
+  --robot_1_model_path weights/mlp_handoff_robot1.pt --robot_1_arch mlp \
+  --robot_2_model_path weights/mlp_handoff_robot2.pt --robot_2_arch mlp \
   --evaluation_times 3
 ```
 

@@ -58,6 +58,10 @@ if __name__ == "__main__":
     parser.add_argument("--action_type", type=str, default="fb_cos_sin")
     parser.add_argument("--selected_actions", type=int, default=None,
                         help="how many predicted actions to execute per inference (dp)")
+    parser.add_argument("--dp_hold_scale", type=float, default=5.0,
+                        help="dp only: temperature on the hold logits "
+                             "(softmax(logits*scale)); higher = more decisive "
+                             "grab/release, <=0 = argmax (deterministic hold)")
     parser.add_argument("--robust_evaluation", action="store_true",
                         help="add noise to item positions at reset")
     parser.add_argument("--experiment_save_path", type=str, default="temp")
@@ -67,13 +71,16 @@ if __name__ == "__main__":
 
     ids = args.map_name if isinstance(args.map_name, list) else [args.map_name]
 
+    hold_scale = args.dp_hold_scale if args.dp_hold_scale > 0 else None
     model_1 = load_policy(
         args.robot_1_arch, args.robot_1_model_path,
         action_type=args.action_type, selected_actions=args.selected_actions,
+        hold_scale=hold_scale,
     )
     model_2 = load_policy(
         args.robot_2_arch, args.robot_2_model_path,
         action_type=args.action_type, selected_actions=args.selected_actions,
+        hold_scale=hold_scale,
     )
 
     file_name = [str(args.robot_1_model_path), str(args.robot_2_model_path)]

@@ -9,9 +9,9 @@ hold_actions a matching list of 0/1 hold decisions, one per executed step.
 
 - MLPPolicy: deterministic (argmax over the hold logits, regression output
   used as-is).
-- GRUPolicy: stochastic — the GRU's initial hidden state is random noise
+- GRUPolicy: stochastic - the GRU's initial hidden state is random noise
   (see models/gru.py) and the hold decision is sampled.
-- DiffusionPolicy: stochastic — actions are denoised from random noise with
+- DiffusionPolicy: stochastic - actions are denoised from random noise with
   a DDIM scheduler and the hold decision is sampled.
 """
 
@@ -85,7 +85,13 @@ class GRUPolicy(_RegressionPolicy):
 class DiffusionPolicy:
     """Stochastic diffusion-policy agent (DDIM denoising from random noise)."""
 
-    def __init__(self, model_path, selected_actions=None, num_inference_steps=None):
+    def __init__(self, model_path, selected_actions=None, num_inference_steps=None,
+                 hold_scale=5.0):
+        # hold_scale sharpens the hold logits before sampling:
+        # softmax(logits * hold_scale). Small values -> noisy grab/release,
+        # large values -> near-deterministic; None -> argmax (fully
+        # deterministic hold). This knob changes grab behavior a lot.
+        self.hold_scale = hold_scale
         self.loaded_data = torch.load(model_path, weights_only=False, map_location=device)
         self.model = self.loaded_data["model"].to(device)
         self.model = self.model.eval()
@@ -132,8 +138,11 @@ class DiffusionPolicy:
         angle = torch.atan2(action[0, :, 2], action[0, :, 1])
         move = torch.stack([fb, angle], dim=1)  # [pred_horizon, 2]
 
-        probabilities = F.softmax(action[0, :, 3:] * 5, dim=-1)
-        holds = torch.multinomial(probabilities, num_samples=1)  # [pred_horizon, 1]
+        if self.hold_scale is None:
+            holds = torch.argmax(action[0, :, 3:], dim=-1, keepdim=True)
+        else:
+            probabilities = F.softmax(action[0, :, 3:] * self.hold_scale, dim=-1)
+            holds = torch.multinomial(probabilities, num_samples=1)  # [pred_horizon, 1]
 
         k = min(self.selected_actions, move.shape[0])
         move_actions = [move[i] for i in range(k)]
@@ -141,12 +150,17 @@ class DiffusionPolicy:
         return move_actions, hold_actions
 
 
-def load_policy(arch, model_path, action_type="fb_cos_sin", selected_actions=None):
-    """Build the right policy wrapper for a saved model."""
+def load_policy(arch, model_path, action_type="fb_cos_sin", selected_actions=None,
+                hold_scale=5.0):
+    """Build the right policy wrapper for a saved model.
+
+    hold_scale (dp only): temperature on the hold logits; higher = more
+    decisive grab/release, None = argmax."""
     if arch == "mlp":
         return MLPPolicy(model_path, action_type)
     elif arch == "gru":
         return GRUPolicy(model_path, action_type)
     elif arch == "dp":
-        return DiffusionPolicy(model_path, selected_actions=selected_actions)
+        return DiffusionPolicy(model_path, selected_actions=selected_actions,
+                               hold_scale=hold_scale)
     raise ValueError(f"unknown model arch {arch!r} (expected mlp | gru | dp)")

@@ -422,28 +422,31 @@ class MovingOutEvaluator:
                     if self.replan_times == 4:
 
                         def merge_images(actions_scores):
-                            # 提取所有条目的图片列表
+                            # Collect the image list of every candidate
                             all_images = [
                                 entry["images_list"]
                                 for entry in actions_scores.values()
                             ]
-                            # 确保每个条目中都有 4 张图片
+                            # Every candidate must provide replan_times images
                             for images_list in all_images:
                                 if len(images_list) != self.replan_times:
                                     raise ValueError(
-                                        "每个 actions_scores 条目中的 images_list 需要包含 4 张图片。"
+                                        "each actions_scores entry needs "
+                                        f"{self.replan_times} images in images_list"
                                     )
 
-                            # 确保图片大小一致
+                            # All images must share the same size
                             height, width, channels = all_images[0][0].shape
                             for images_list in all_images:
                                 for img in images_list:
                                     if img.shape != (height, width, channels):
-                                        raise ValueError("所有图片需要有相同的尺寸以进行拼接。")
+                                        raise ValueError(
+                                            "all images must have the same size"
+                                        )
 
-                            # 拼接每个图片列表的图片为 2x2
+                            # Stitch the candidates into a 2x2 grid per step
                             merged_images = []
-                            for i in range(self.replan_times):  # 针对每张 2x2 的目标图片
+                            for i in range(self.replan_times):
                                 top_row = np.hstack(
                                     (all_images[0][i], all_images[1][i])
                                 )

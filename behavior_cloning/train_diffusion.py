@@ -1,6 +1,8 @@
 from datetime import datetime
 
 import numpy as np
+import os
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -130,7 +132,7 @@ if __name__ == "__main__":
         "--robot_id", default="both", type=str, choices=["1", "2", "both"],
         help="which robot's model to train; each robot uses only its own data",
     )
-    parser.add_argument("--model_save_path", default="dp.pt", type=str, help="model path; _robot1/_robot2 is appended")
+    parser.add_argument("--model_save_path", default="weights/dp.pt", type=str, help="model path; _robot1/_robot2 is appended")
     parser.add_argument("--obs_horizon", default=1, type=int)
     parser.add_argument(
         "--action_horizon", default=8, type=int,
@@ -187,6 +189,8 @@ if __name__ == "__main__":
         all_training_options["action_dim"] = ACTION_DIM
 
         save_path = args.model_save_path.replace(".pt", f"_robot{robot_id}.pt")
+        if os.path.dirname(save_path):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         print(f"=== training diffusion policy for robot_{robot_id} ({len(dataset)} samples) -> {save_path}")
         train(
             model,

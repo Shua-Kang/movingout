@@ -2,6 +2,8 @@ import copy
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -211,7 +213,7 @@ if __name__ == "__main__":
         "--robot_id", default="both", type=str, choices=["1", "2", "both"],
         help="which robot's model to train; each robot uses only its own data",
     )
-    parser.add_argument("--model_save_path", default="mlp.pt", type=str, help="model path; _robot1/_robot2 is appended")
+    parser.add_argument("--model_save_path", default="weights/mlp.pt", type=str, help="model path; _robot1/_robot2 is appended")
     parser.add_argument(
         "--action_type", default="fb_cos_sin", type=str, help="action encoding"
     )
@@ -262,6 +264,8 @@ if __name__ == "__main__":
         all_training_options["selected_actions"] = action_horizon
 
         save_path = args.model_save_path.replace(".pt", f"_robot{robot_id}.pt")
+        if os.path.dirname(save_path):
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
         print(f"=== training MLP for robot_{robot_id} ({len(dataset)} samples) -> {save_path}")
         # Train the model
         train(
